@@ -13,11 +13,13 @@ vi.mock("../api", async () => {
     ...actual,
     getCustomer: vi.fn(),
     getModelInfo: vi.fn(),
+    updateOutreachStatus: vi.fn(),
   };
 });
 
 const getCustomerMock = vi.mocked(api.getCustomer);
 const getModelInfoMock = vi.mocked(api.getModelInfo);
+const updateOutreachStatusMock = vi.mocked(api.updateOutreachStatus);
 
 afterEach(() => {
   vi.clearAllMocks();
@@ -281,5 +283,25 @@ describe("CustomerDetailView", () => {
 
     expect(screen.getByText("No customer id was provided.")).toBeInTheDocument();
     expect(getCustomerMock).not.toHaveBeenCalled();
+  });
+
+  it("updates the displayed outreach status after a successful transition", async () => {
+    getCustomerMock.mockResolvedValue(makeDetail());
+    getModelInfoMock.mockResolvedValue(makeModelInfo());
+    updateOutreachStatusMock.mockResolvedValue(
+      makeDetail({
+        customer: { ...makeDetail().customer, outreach_status: "IN_PROGRESS" },
+      }),
+    );
+    const user = userEvent.setup();
+
+    renderDetail();
+    await waitFor(() => expect(screen.getByText("7590-VHVEG")).toBeInTheDocument());
+    expect(screen.getByText("Not contacted")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Mark as In progress →" }));
+
+    await waitFor(() => expect(screen.getByText("In progress")).toBeInTheDocument());
+    expect(updateOutreachStatusMock).toHaveBeenCalledWith("7590-VHVEG", "IN_PROGRESS");
   });
 });

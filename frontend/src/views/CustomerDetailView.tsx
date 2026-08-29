@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { ApiError, getCustomer, getModelInfo } from "../api";
 import type { Customer, CustomerDetail, ModelInfo } from "../api";
-import { OutreachBadge } from "../components/OutreachBadge";
+import { OutreachControl } from "../components/OutreachControl";
 import { RiskBadge } from "../components/RiskBadge";
 import "./CustomerDetailView.css";
 
@@ -105,8 +105,15 @@ export function CustomerDetailView() {
             </div>
             <div className="detail__header-right">
               <RiskBadge tier={detail.risk.tier} score={detail.risk.score} />
-              <OutreachBadge status={detail.customer.outreach_status} />
             </div>
+          </div>
+
+          <div className="detail__card detail__outreach-row">
+            <OutreachControl
+              customerId={detail.customer.customer_id}
+              status={detail.customer.outreach_status}
+              onUpdated={setDetail}
+            />
           </div>
 
           <div className="detail__body">
