@@ -1,0 +1,23 @@
+.detail-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.detail-skeleton__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.detail-skeleton__header-text {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.detail-skeleton__body {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr;
+  gap: 20px;
+}

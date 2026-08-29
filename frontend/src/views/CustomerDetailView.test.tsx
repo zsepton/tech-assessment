@@ -103,9 +103,9 @@ describe("CustomerDetailView", () => {
     getCustomerMock.mockResolvedValue(makeDetail());
     getModelInfoMock.mockResolvedValue(makeModelInfo());
 
-    renderDetail();
+    const { container } = renderDetail();
 
-    expect(screen.getByText("Loading…")).toBeInTheDocument();
+    expect(container.querySelector(".detail-skeleton")).toBeInTheDocument();
 
     await waitFor(() => expect(screen.getByText("7590-VHVEG")).toBeInTheDocument());
     expect(screen.getByText("92 · High")).toBeInTheDocument();
