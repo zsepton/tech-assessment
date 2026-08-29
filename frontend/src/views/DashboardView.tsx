@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { ApiError, getCustomers } from "../api";
 import type { PaginatedCustomers } from "../api";
 import { FilterBar } from "../components/FilterBar";
@@ -93,12 +94,15 @@ export function DashboardView() {
                   <th>Monthly charges</th>
                   <th>Risk score</th>
                   <th>Outreach</th>
+                  <th aria-hidden="true"></th>
                 </tr>
               </thead>
               <tbody>
                 {data.items.map((item) => (
                   <tr key={item.customer_id}>
-                    <td className="dashboard__customer-id">{item.customer_id}</td>
+                    <td className="dashboard__customer-id">
+                      <Link to={`/customers/${item.customer_id}`}>{item.customer_id}</Link>
+                    </td>
                     <td>{item.contract}</td>
                     <td>{item.tenure} mo</td>
                     <td>${item.monthly_charges.toFixed(2)}</td>
@@ -107,6 +111,14 @@ export function DashboardView() {
                     </td>
                     <td>
                       <OutreachBadge status={item.outreach_status} />
+                    </td>
+                    <td className="dashboard__view-link">
+                      <Link
+                        to={`/customers/${item.customer_id}`}
+                        aria-label={`View ${item.customer_id}`}
+                      >
+                        ›
+                      </Link>
                     </td>
                   </tr>
                 ))}

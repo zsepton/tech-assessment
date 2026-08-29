@@ -64,7 +64,30 @@ td {
 .dashboard__customer-id {
   font-family: var(--font-mono);
   font-weight: 600;
+}
+
+.dashboard__customer-id a {
   color: var(--text-primary);
+  text-decoration: none;
+}
+
+.dashboard__customer-id a:hover {
+  color: var(--accent);
+}
+
+.dashboard__view-link {
+  text-align: right;
+  width: 32px;
+}
+
+.dashboard__view-link a {
+  color: var(--text-tertiary);
+  text-decoration: none;
+  font-size: 16px;
+}
+
+.dashboard__view-link a:hover {
+  color: var(--accent);
 }
 
 .dashboard__empty {

@@ -1,10 +1,19 @@
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import * as api from "../api";
 import { ApiError } from "../api";
 import type { PaginatedCustomers } from "../api";
 import { DashboardView } from "./DashboardView";
+
+function renderDashboard() {
+  return render(
+    <MemoryRouter>
+      <DashboardView />
+    </MemoryRouter>,
+  );
+}
 
 vi.mock("../api", async () => {
   const actual = await vi.importActual<typeof import("../api")>("../api");
@@ -43,7 +52,7 @@ function makePage(overrides: Partial<PaginatedCustomers> = {}): PaginatedCustome
 describe("DashboardView", () => {
   it("renders customers once loaded", async () => {
     getCustomersMock.mockResolvedValue(makePage());
-    render(<DashboardView />);
+    renderDashboard();
 
     expect(screen.getByText("Loading…")).toBeInTheDocument();
 
@@ -53,23 +62,36 @@ describe("DashboardView", () => {
     expect(table.getByText("Not contacted")).toBeInTheDocument();
   });
 
+  it("links each customer row to its detail view", async () => {
+    getCustomersMock.mockResolvedValue(makePage());
+    renderDashboard();
+
+    await waitFor(() => expect(screen.getByText("7590-VHVEG")).toBeInTheDocument());
+
+    const links = screen.getAllByRole("link", { name: /7590-VHVEG/ });
+    expect(links.length).toBeGreaterThan(0);
+    for (const link of links) {
+      expect(link).toHaveAttribute("href", "/customers/7590-VHVEG");
+    }
+  });
+
   it("shows an error message when the request fails with an ApiError", async () => {
     getCustomersMock.mockRejectedValue(new ApiError("boom", 500, "Server error"));
-    render(<DashboardView />);
+    renderDashboard();
 
     await waitFor(() => expect(screen.getByText("Server error")).toBeInTheDocument());
   });
 
   it("shows a generic error message for a non-ApiError failure", async () => {
     getCustomersMock.mockRejectedValue(new Error("weird"));
-    render(<DashboardView />);
+    renderDashboard();
 
     await waitFor(() => expect(screen.getByText("Something went wrong.")).toBeInTheDocument());
   });
 
   it("shows an empty state when there are no matching customers", async () => {
     getCustomersMock.mockResolvedValue(makePage({ items: [], total: 0 }));
-    render(<DashboardView />);
+    renderDashboard();
 
     await waitFor(() =>
       expect(screen.getByText("No customers match these filters.")).toBeInTheDocument(),
@@ -79,7 +101,7 @@ describe("DashboardView", () => {
   it("resets to offset 0 and re-fetches with the new filter when a filter changes", async () => {
     getCustomersMock.mockResolvedValue(makePage());
     const user = userEvent.setup();
-    render(<DashboardView />);
+    renderDashboard();
     await waitFor(() => expect(screen.getByText("7590-VHVEG")).toBeInTheDocument());
 
     await user.selectOptions(screen.getByLabelText("Filter by risk tier"), "High");
@@ -94,7 +116,7 @@ describe("DashboardView", () => {
   it("moves to the next page and re-fetches with the new offset", async () => {
     getCustomersMock.mockResolvedValue(makePage({ total: 100 }));
     const user = userEvent.setup();
-    render(<DashboardView />);
+    renderDashboard();
     await waitFor(() => expect(screen.getByText("7590-VHVEG")).toBeInTheDocument());
 
     await user.click(screen.getByText("Next ›"));
@@ -107,7 +129,7 @@ describe("DashboardView", () => {
   it("moves back to the previous page and re-fetches with the earlier offset", async () => {
     getCustomersMock.mockResolvedValue(makePage({ total: 100, offset: 20 }));
     const user = userEvent.setup();
-    render(<DashboardView />);
+    renderDashboard();
     await waitFor(() => expect(screen.getByText("7590-VHVEG")).toBeInTheDocument());
 
     await user.click(screen.getByText("‹ Prev"));
@@ -126,7 +148,7 @@ describe("DashboardView", () => {
     getCustomersMock.mockResolvedValueOnce(makePage({ total: 5 }));
 
     const user = userEvent.setup();
-    render(<DashboardView />);
+    renderDashboard();
 
     // Trigger a second, superseding request before the first resolves.
     await user.selectOptions(screen.getByLabelText("Filter by risk tier"), "High");
@@ -148,7 +170,7 @@ describe("DashboardView", () => {
     getCustomersMock.mockResolvedValueOnce(makePage());
 
     const user = userEvent.setup();
-    render(<DashboardView />);
+    renderDashboard();
 
     await user.selectOptions(screen.getByLabelText("Filter by risk tier"), "High");
     await waitFor(() => expect(screen.getByText("7590-VHVEG")).toBeInTheDocument());
