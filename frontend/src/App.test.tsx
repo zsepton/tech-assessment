@@ -1,21 +1,19 @@
-import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { render, screen, waitFor } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
+import { getCustomers } from "./api";
 import App from "./App";
 
+vi.mock("./api", async () => {
+  const actual = await vi.importActual<typeof import("./api")>("./api");
+  return { ...actual, getCustomers: vi.fn() };
+});
+
 describe("App", () => {
-  it("renders the getting-started heading", () => {
-    render(<App />);
-    expect(screen.getByRole("heading", { name: "Get started" })).toBeInTheDocument();
-  });
+  it("renders the customer dashboard", async () => {
+    vi.mocked(getCustomers).mockResolvedValue({ items: [], total: 0, offset: 0, limit: 20 });
 
-  it("increments the counter when the button is clicked", async () => {
-    const user = userEvent.setup();
     render(<App />);
 
-    const button = screen.getByRole("button", { name: "Count is 0" });
-    await user.click(button);
-
-    expect(screen.getByRole("button", { name: "Count is 1" })).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText("Customer risk dashboard")).toBeInTheDocument());
   });
 });
