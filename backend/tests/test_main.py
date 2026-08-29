@@ -47,6 +47,8 @@ def test_health_request_is_logged(client: TestClient, caplog: pytest.LogCaptureF
 
     client.get("/health")
 
-    assert "GET" in caplog.text
-    assert "/health" in caplog.text
-    assert "200" in caplog.text
+    records = [r for r in caplog.records if r.name == "app.request"]
+    assert len(records) == 1
+    assert records[0].method == "GET"  # type: ignore[attr-defined]
+    assert records[0].path == "/health"  # type: ignore[attr-defined]
+    assert records[0].status_code == 200  # type: ignore[attr-defined]

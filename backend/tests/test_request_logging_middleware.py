@@ -21,20 +21,27 @@ def build_app() -> FastAPI:
     return test_app
 
 
-def test_logs_method_path_status_and_duration(caplog: pytest.LogCaptureFixture) -> None:
+def test_logs_method_path_status_and_duration_as_discrete_fields(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
     caplog.set_level(logging.INFO, logger="app.request")
     client = TestClient(build_app())
 
     response = client.get("/ok")
 
     assert response.status_code == 200
-    assert "GET" in caplog.text
-    assert "/ok" in caplog.text
-    assert "200" in caplog.text
-    assert "ms)" in caplog.text
+    records = [r for r in caplog.records if r.name == "app.request"]
+    assert len(records) == 1
+    record = records[0]
+    assert record.method == "GET"  # type: ignore[attr-defined]
+    assert record.path == "/ok"  # type: ignore[attr-defined]
+    assert record.status_code == 200  # type: ignore[attr-defined]
+    assert isinstance(record.duration_ms, float)  # type: ignore[attr-defined]
 
 
-def test_logs_unhandled_error_with_request_context(caplog: pytest.LogCaptureFixture) -> None:
+def test_logs_unhandled_error_with_request_context_as_discrete_fields(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
     caplog.set_level(logging.INFO, logger="app.request")
     client = TestClient(build_app(), raise_server_exceptions=False)
 
@@ -43,5 +50,7 @@ def test_logs_unhandled_error_with_request_context(caplog: pytest.LogCaptureFixt
     assert response.status_code == 500
     error_records = [r for r in caplog.records if r.levelno >= logging.ERROR]
     assert len(error_records) == 1
-    assert error_records[0].exc_info is not None
-    assert "/boom" in caplog.text
+    record = error_records[0]
+    assert record.exc_info is not None
+    assert record.method == "GET"  # type: ignore[attr-defined]
+    assert record.path == "/boom"  # type: ignore[attr-defined]
