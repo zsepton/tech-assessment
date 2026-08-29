@@ -52,9 +52,9 @@ function makePage(overrides: Partial<PaginatedCustomers> = {}): PaginatedCustome
 describe("DashboardView", () => {
   it("renders customers once loaded", async () => {
     getCustomersMock.mockResolvedValue(makePage());
-    renderDashboard();
+    const { container } = renderDashboard();
 
-    expect(screen.getByText("Loading…")).toBeInTheDocument();
+    expect(container.querySelector(".dashboard-table-skeleton")).toBeInTheDocument();
 
     await waitFor(() => expect(screen.getByText("7590-VHVEG")).toBeInTheDocument());
     const table = within(screen.getByRole("table"));

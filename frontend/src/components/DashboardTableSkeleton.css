@@ -1,0 +1,17 @@
+.dashboard-table-skeleton {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.dashboard-table-skeleton__row {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 15px 20px;
+}
+
+.dashboard-table-skeleton__row:not(:first-child) {
+  border-top: 1px solid var(--border);
+}

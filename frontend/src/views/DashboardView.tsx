@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { ApiError, getCustomers } from "../api";
 import type { PaginatedCustomers } from "../api";
+import { DashboardTableSkeleton } from "../components/DashboardTableSkeleton";
+import { ErrorBanner } from "../components/ErrorBanner";
 import { FilterBar } from "../components/FilterBar";
 import type { CustomerFilters } from "../components/FilterBar";
 import { OutreachBadge } from "../components/OutreachBadge";
@@ -79,8 +81,8 @@ export function DashboardView() {
 
       <FilterBar filters={filters} onChange={handleFiltersChange} />
 
-      {loading && <p className="dashboard__status">Loading…</p>}
-      {error && <p className="dashboard__status dashboard__status--error">{error}</p>}
+      {loading && <DashboardTableSkeleton />}
+      {error && <ErrorBanner message={error} />}
 
       {!loading && !error && data && (
         <>

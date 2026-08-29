@@ -19,15 +19,6 @@
   margin: 4px 0 0;
 }
 
-.dashboard__status {
-  font-size: 14px;
-  color: var(--text-secondary);
-}
-
-.dashboard__status--error {
-  color: var(--danger);
-}
-
 .dashboard__table-card {
   background: var(--bg-surface);
   border: 1px solid var(--border);

@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { ApiError, getCustomer, getModelInfo } from "../api";
 import type { Customer, CustomerDetail, ModelInfo } from "../api";
+import { DetailSkeleton } from "../components/DetailSkeleton";
+import { ErrorBanner } from "../components/ErrorBanner";
 import { OutreachControl } from "../components/OutreachControl";
 import { RiskBadge } from "../components/RiskBadge";
 import "./CustomerDetailView.css";
@@ -79,7 +81,7 @@ export function CustomerDetailView() {
         <Link to="/" className="detail__back">
           ‹ Back to dashboard
         </Link>
-        <p className="detail__status detail__status--error">No customer id was provided.</p>
+        <ErrorBanner message="No customer id was provided." />
       </div>
     );
   }
@@ -90,8 +92,8 @@ export function CustomerDetailView() {
         ‹ Back to dashboard
       </Link>
 
-      {loading && <p className="detail__status">Loading…</p>}
-      {error && <p className="detail__status detail__status--error">{error}</p>}
+      {loading && <DetailSkeleton />}
+      {error && <ErrorBanner message={error} />}
 
       {!loading && !error && detail && (
         <>
