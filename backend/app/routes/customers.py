@@ -3,8 +3,9 @@ from fastapi import APIRouter, HTTPException, Query, Request
 from app.models.customer import Customer
 from app.models.customer_detail import CustomerDetail
 from app.models.customer_list import CustomerListItem, PaginatedCustomers
-from app.models.outreach import OutreachStatus
+from app.models.outreach import OutreachStatus, OutreachUpdateRequest
 from app.models.risk import RiskTier
+from app.services.outreach import InvalidOutreachTransitionError, validate_transition
 from app.services.scoring import compute_risk_score
 
 router = APIRouter()
@@ -45,10 +46,17 @@ def _validate_contract_filter(value: str | None) -> None:
         raise HTTPException(status_code=400, detail=f"Invalid contract filter value: {value!r}")
 
 
-def _get_customer_or_404(raw_customers: dict[str, dict[str, object]], customer_id: str) -> Customer:
+def _get_raw_customer_or_404(
+    raw_customers: dict[str, dict[str, object]], customer_id: str
+) -> dict[str, object]:
     raw = raw_customers.get(customer_id)
     if raw is None:
         raise HTTPException(status_code=404, detail=f"Customer '{customer_id}' not found.")
+    return raw
+
+
+def _get_customer_or_404(raw_customers: dict[str, dict[str, object]], customer_id: str) -> Customer:
+    raw = _get_raw_customer_or_404(raw_customers, customer_id)
     return Customer(**raw)  # type: ignore[arg-type]
 
 
@@ -112,5 +120,27 @@ def list_customers(
 def get_customer(customer_id: str, request: Request) -> CustomerDetail:
     raw_customers: dict[str, dict[str, object]] = request.app.state.customers
     customer = _get_customer_or_404(raw_customers, customer_id)
+    risk = compute_risk_score(customer)
+    return CustomerDetail(customer=customer, risk=risk)
+
+
+@router.patch("/customers/{customer_id}/outreach", response_model=CustomerDetail)
+def update_outreach_status(
+    customer_id: str, body: OutreachUpdateRequest, request: Request
+) -> CustomerDetail:
+    raw_customers: dict[str, dict[str, object]] = request.app.state.customers
+    raw = _get_raw_customer_or_404(raw_customers, customer_id)
+
+    current_status = Customer(**raw).outreach_status  # type: ignore[arg-type]
+    try:
+        validate_transition(current_status, body.status)
+    except InvalidOutreachTransitionError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    # Synchronous, no `await` between the transition check above and this
+    # write — safe under FastAPI's single-process model without a lock.
+    raw["outreach_status"] = body.status.value
+
+    customer = Customer(**raw)  # type: ignore[arg-type]
     risk = compute_risk_score(customer)
     return CustomerDetail(customer=customer, risk=risk)
