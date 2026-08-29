@@ -18,7 +18,7 @@ files = ["app"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "--cov=app --cov-report=term-missing --cov-fail-under=100"
+addopts = "--cov=app --cov-report=term-missing --cov-report=html --cov-fail-under=100"
 
 [tool.coverage.run]
 source = ["app"]
