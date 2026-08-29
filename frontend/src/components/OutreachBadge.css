@@ -1,0 +1,32 @@
+.outreach-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12.5px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.outreach-badge__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.outreach-badge--neutral {
+  background: var(--status-neutral-bg);
+  color: var(--status-neutral);
+}
+
+.outreach-badge--progress {
+  background: var(--status-progress-bg);
+  color: var(--status-progress);
+}
+
+.outreach-badge--resolved {
+  background: var(--status-resolved-bg);
+  color: var(--status-resolved);
+}
