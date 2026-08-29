@@ -43,11 +43,12 @@ def test_logs_unhandled_error_with_request_context_as_discrete_fields(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     caplog.set_level(logging.INFO, logger="app.request")
-    client = TestClient(build_app(), raise_server_exceptions=False)
+    client = TestClient(build_app())
 
     response = client.get("/boom")
 
     assert response.status_code == 500
+    assert response.json() == {"detail": "Internal server error"}
     error_records = [r for r in caplog.records if r.levelno >= logging.ERROR]
     assert len(error_records) == 1
     record = error_records[0]
