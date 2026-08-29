@@ -1,0 +1,38 @@
+.outreach-control {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.outreach-control__button {
+  border: none;
+  background: var(--accent);
+  color: white;
+  font-family: var(--font-sans);
+  font-size: 13.5px;
+  font-weight: 600;
+  padding: 9px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.outreach-control__button:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+.outreach-control__button:disabled {
+  cursor: default;
+  opacity: 0.7;
+}
+
+.outreach-control__terminal {
+  font-size: 12.5px;
+  color: var(--text-tertiary);
+  font-style: italic;
+}
+
+.outreach-control__error {
+  font-size: 12.5px;
+  color: var(--danger);
+}
