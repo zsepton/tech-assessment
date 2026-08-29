@@ -1,3 +1,4 @@
+import logging
 from collections.abc import Iterator
 
 import pytest
@@ -39,3 +40,15 @@ def test_cors_rejects_unlisted_origin(client: TestClient) -> None:
 def test_startup_loads_customers_into_app_state(client: TestClient) -> None:
     assert len(app.state.customers) > 0
     assert "7590-VHVEG" in app.state.customers
+
+
+def test_health_request_is_logged(client: TestClient, caplog: pytest.LogCaptureFixture) -> None:
+    caplog.set_level(logging.INFO, logger="app.request")
+
+    client.get("/health")
+
+    records = [r for r in caplog.records if r.name == "app.request"]
+    assert len(records) == 1
+    assert records[0].method == "GET"  # type: ignore[attr-defined]
+    assert records[0].path == "/health"  # type: ignore[attr-defined]
+    assert records[0].status_code == 200  # type: ignore[attr-defined]
