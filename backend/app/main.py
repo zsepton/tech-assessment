@@ -8,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.data_access.customers import load_customers
 from app.logging_config import configure_logging
 from app.middleware.logging import RequestLoggingMiddleware
+from app.routes.customers import router as customers_router
 
 configure_logging()
 
@@ -30,6 +31,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 app.add_middleware(RequestLoggingMiddleware)
+
+app.include_router(customers_router)
 
 
 @app.get("/health")

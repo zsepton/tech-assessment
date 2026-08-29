@@ -3,7 +3,7 @@ import time
 
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.requests import Request
-from starlette.responses import Response
+from starlette.responses import JSONResponse, Response
 
 logger = logging.getLogger("app.request")
 
@@ -16,8 +16,12 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
     being folded into the free-text message.
 
     Unhandled exceptions are logged with the same request context (and full
-    traceback via logger.exception) before being re-raised for Starlette's
-    default error handling to convert into a response.
+    traceback via logger.exception), then converted into a 500 response with
+    the same JSON error shape ({"detail": ...}) as HTTPException responses.
+    This middleware sits outside FastAPI's own exception-handling layer, so
+    it — not a `@app.exception_handler` — is the right place to do this: a
+    handler registered on `app` would intercept the exception before it ever
+    reached here, silently defeating this logging.
     """
 
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
@@ -34,7 +38,7 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
                     "duration_ms": duration_ms,
                 },
             )
-            raise
+            return JSONResponse(status_code=500, content={"detail": "Internal server error"})
 
         duration_ms = round((time.perf_counter() - start) * 1000, 2)
         logger.info(
