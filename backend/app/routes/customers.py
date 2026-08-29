@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException, Query, Request
 
 from app.models.customer import Customer
+from app.models.customer_detail import CustomerDetail
 from app.models.customer_list import CustomerListItem, PaginatedCustomers
 from app.models.outreach import OutreachStatus
 from app.models.risk import RiskTier
@@ -42,6 +43,13 @@ def _parse_outreach_status_filter(value: str | None) -> OutreachStatus | None:
 def _validate_contract_filter(value: str | None) -> None:
     if value is not None and value not in VALID_CONTRACTS:
         raise HTTPException(status_code=400, detail=f"Invalid contract filter value: {value!r}")
+
+
+def _get_customer_or_404(raw_customers: dict[str, dict[str, object]], customer_id: str) -> Customer:
+    raw = raw_customers.get(customer_id)
+    if raw is None:
+        raise HTTPException(status_code=404, detail=f"Customer '{customer_id}' not found.")
+    return Customer(**raw)  # type: ignore[arg-type]
 
 
 @router.get("/customers", response_model=PaginatedCustomers)
@@ -98,3 +106,11 @@ def list_customers(
     ]
 
     return PaginatedCustomers(items=items, total=total, offset=offset, limit=limit)
+
+
+@router.get("/customers/{customer_id}", response_model=CustomerDetail)
+def get_customer(customer_id: str, request: Request) -> CustomerDetail:
+    raw_customers: dict[str, dict[str, object]] = request.app.state.customers
+    customer = _get_customer_or_404(raw_customers, customer_id)
+    risk = compute_risk_score(customer)
+    return CustomerDetail(customer=customer, risk=risk)
