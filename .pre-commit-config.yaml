@@ -21,3 +21,10 @@ repos:
         language: system
         files: ^frontend/.*\.(ts|tsx|js|jsx)$
         pass_filenames: false
+
+      - id: pytest-cov
+        name: pytest --cov (backend, 100% required)
+        entry: bash -c 'cd backend && .venv/bin/pytest'
+        language: system
+        files: ^backend/.*\.py$
+        pass_filenames: false
