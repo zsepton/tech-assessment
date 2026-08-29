@@ -28,3 +28,10 @@ repos:
         language: system
         files: ^backend/.*\.py$
         pass_filenames: false
+
+      - id: vitest-cov
+        name: vitest --coverage (frontend, 100% required)
+        entry: bash -c 'cd frontend && npx vitest run --coverage'
+        language: system
+        files: ^frontend/.*\.(ts|tsx|js|jsx)$
+        pass_filenames: false
