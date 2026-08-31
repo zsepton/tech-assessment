@@ -19,9 +19,18 @@ export function OutreachControl({ customerId, status, onUpdated }: OutreachContr
   // Unlike the effect-scoped `cancelled` flags in DashboardView/
   // CustomerDetailView, this guard spans the component's whole lifetime
   // (not one fetch), since a click can be followed by an unmount at any
-  // point before the PATCH resolves.
+  // point before the PATCH resolves. The ref is reset to `true` at the top
+  // of the effect body, not just via `useRef(true)`'s initial value: React
+  // 18 StrictMode mounts, cleans up, and re-mounts every component once in
+  // development, and without this reset the cleanup's `= false` would never
+  // be undone, permanently disabling every future update for the rest of
+  // the component's real lifetime (this was a live, reproduced bug: the
+  // PATCH request succeeded, but the button stayed stuck on "Updating…"
+  // forever because `onUpdated`/`setUpdating(false)` were both silently
+  // skipped every time afterward).
   const mountedRef = useRef(true);
   useEffect(() => {
+    mountedRef.current = true;
     return () => {
       mountedRef.current = false;
     };
