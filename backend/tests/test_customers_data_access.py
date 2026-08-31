@@ -1,7 +1,17 @@
 import csv
 from pathlib import Path
 
-from app.data_access.customers import load_customers, parse_customer_row
+import pytest
+from app.data_access.customers import (
+    CustomerNotFoundError,
+    CustomerStore,
+    get_all_customers,
+    get_customer,
+    load_customers,
+    parse_customer_row,
+    update_outreach_status,
+)
+from app.models.outreach import OutreachStatus
 
 RAW_ROW = {
     "customerID": "7590-VHVEG",
@@ -70,3 +80,49 @@ def test_load_customers_keys_by_customer_id(tmp_path: Path) -> None:
 
     assert set(customers.keys()) == {"7590-VHVEG", "5575-GNVDE"}
     assert customers["5575-GNVDE"]["total_charges"] == 0.0
+
+
+def _store() -> CustomerStore:
+    return {
+        "7590-VHVEG": parse_customer_row(RAW_ROW),
+        "5575-GNVDE": parse_customer_row({**RAW_ROW, "customerID": "5575-GNVDE"}),
+    }
+
+
+def test_get_all_customers_returns_every_record() -> None:
+    store = _store()
+
+    all_customers = get_all_customers(store)
+
+    assert {c["customer_id"] for c in all_customers} == {"7590-VHVEG", "5575-GNVDE"}
+
+
+def test_get_customer_returns_matching_record() -> None:
+    store = _store()
+
+    customer = get_customer(store, "7590-VHVEG")
+
+    assert customer["customer_id"] == "7590-VHVEG"
+
+
+def test_get_customer_raises_for_unknown_id() -> None:
+    store = _store()
+
+    with pytest.raises(CustomerNotFoundError):
+        get_customer(store, "does-not-exist")
+
+
+def test_update_outreach_status_persists_and_returns_updated_record() -> None:
+    store = _store()
+
+    updated = update_outreach_status(store, "7590-VHVEG", OutreachStatus.IN_PROGRESS)
+
+    assert updated["outreach_status"] == "IN_PROGRESS"
+    assert store["7590-VHVEG"]["outreach_status"] == "IN_PROGRESS"
+
+
+def test_update_outreach_status_raises_for_unknown_id() -> None:
+    store = _store()
+
+    with pytest.raises(CustomerNotFoundError):
+        update_outreach_status(store, "does-not-exist", OutreachStatus.IN_PROGRESS)

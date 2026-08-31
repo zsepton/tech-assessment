@@ -1,5 +1,9 @@
+from typing import Any
+
 from fastapi import APIRouter, HTTPException, Query, Request
 
+from app.data_access import customers as customer_store
+from app.data_access.customers import CustomerNotFoundError, CustomerStore
 from app.models.customer import Customer
 from app.models.customer_detail import CustomerDetail
 from app.models.customer_list import CustomerListItem, PaginatedCustomers
@@ -46,18 +50,16 @@ def _validate_contract_filter(value: str | None) -> None:
         raise HTTPException(status_code=400, detail=f"Invalid contract filter value: {value!r}")
 
 
-def _get_raw_customer_or_404(
-    raw_customers: dict[str, dict[str, object]], customer_id: str
-) -> dict[str, object]:
-    raw = raw_customers.get(customer_id)
-    if raw is None:
-        raise HTTPException(status_code=404, detail=f"Customer '{customer_id}' not found.")
-    return raw
+def _get_raw_customer_or_404(store: CustomerStore, customer_id: str) -> dict[str, Any]:
+    try:
+        return customer_store.get_customer(store, customer_id)
+    except CustomerNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=f"Customer '{customer_id}' not found.") from exc
 
 
-def _get_customer_or_404(raw_customers: dict[str, dict[str, object]], customer_id: str) -> Customer:
-    raw = _get_raw_customer_or_404(raw_customers, customer_id)
-    return Customer(**raw)  # type: ignore[arg-type]
+def _get_customer_or_404(store: CustomerStore, customer_id: str) -> Customer:
+    raw = _get_raw_customer_or_404(store, customer_id)
+    return Customer(**raw)
 
 
 @router.get("/customers", response_model=PaginatedCustomers)
@@ -73,11 +75,11 @@ def list_customers(
     parsed_outreach_status = _parse_outreach_status_filter(outreach_status)
     _validate_contract_filter(contract)
 
-    raw_customers: dict[str, dict[str, object]] = request.app.state.customers
+    store: CustomerStore = request.app.state.customers
 
     scored = []
-    for raw in raw_customers.values():
-        customer = Customer(**raw)  # type: ignore[arg-type]
+    for raw in customer_store.get_all_customers(store):
+        customer = Customer(**raw)
         risk = compute_risk_score(customer)
 
         if parsed_risk_tier is not None and risk.tier != parsed_risk_tier:
@@ -118,8 +120,8 @@ def list_customers(
 
 @router.get("/customers/{customer_id}", response_model=CustomerDetail)
 def get_customer(customer_id: str, request: Request) -> CustomerDetail:
-    raw_customers: dict[str, dict[str, object]] = request.app.state.customers
-    customer = _get_customer_or_404(raw_customers, customer_id)
+    store: CustomerStore = request.app.state.customers
+    customer = _get_customer_or_404(store, customer_id)
     risk = compute_risk_score(customer)
     return CustomerDetail(customer=customer, risk=risk)
 
@@ -128,10 +130,10 @@ def get_customer(customer_id: str, request: Request) -> CustomerDetail:
 def update_outreach_status(
     customer_id: str, body: OutreachUpdateRequest, request: Request
 ) -> CustomerDetail:
-    raw_customers: dict[str, dict[str, object]] = request.app.state.customers
-    raw = _get_raw_customer_or_404(raw_customers, customer_id)
+    store: CustomerStore = request.app.state.customers
+    raw = _get_raw_customer_or_404(store, customer_id)
 
-    current_status = Customer(**raw).outreach_status  # type: ignore[arg-type]
+    current_status = Customer(**raw).outreach_status
     try:
         validate_transition(current_status, body.status)
     except InvalidOutreachTransitionError as exc:
@@ -139,8 +141,8 @@ def update_outreach_status(
 
     # Synchronous, no `await` between the transition check above and this
     # write — safe under FastAPI's single-process model without a lock.
-    raw["outreach_status"] = body.status.value
+    raw = customer_store.update_outreach_status(store, customer_id, body.status)
 
-    customer = Customer(**raw)  # type: ignore[arg-type]
+    customer = Customer(**raw)
     risk = compute_risk_score(customer)
     return CustomerDetail(customer=customer, risk=risk)
