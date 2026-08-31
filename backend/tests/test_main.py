@@ -2,7 +2,7 @@ import logging
 from collections.abc import Iterator
 
 import pytest
-from app.main import app
+from app.main import _parse_allowed_origins, app
 from fastapi.testclient import TestClient
 
 
@@ -52,3 +52,22 @@ def test_health_request_is_logged(client: TestClient, caplog: pytest.LogCaptureF
     assert records[0].method == "GET"  # type: ignore[attr-defined]
     assert records[0].path == "/health"  # type: ignore[attr-defined]
     assert records[0].status_code == 200  # type: ignore[attr-defined]
+
+
+@pytest.mark.parametrize(
+    ("raw", "expected"),
+    [
+        ("http://localhost:5173", ["http://localhost:5173"]),
+        (
+            "http://localhost:5173,http://localhost:4173",
+            ["http://localhost:5173", "http://localhost:4173"],
+        ),
+        (
+            " http://localhost:5173 , http://localhost:4173 ",
+            ["http://localhost:5173", "http://localhost:4173"],
+        ),
+        ("", []),
+    ],
+)
+def test_parse_allowed_origins(raw: str, expected: list[str]) -> None:
+    assert _parse_allowed_origins(raw) == expected
