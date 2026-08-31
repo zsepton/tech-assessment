@@ -6,7 +6,7 @@ from app.data_access.customers import (
     CustomerNotFoundError,
     CustomerStore,
     get_all_customers,
-    get_customer,
+    get_raw_customer,
     load_customers,
     parse_customer_row,
     update_outreach_status,
@@ -113,19 +113,19 @@ def test_get_all_customers_returns_every_record_as_a_domain_object() -> None:
     assert all(isinstance(c, Customer) for c in all_customers)
 
 
-def test_get_customer_returns_matching_record() -> None:
+def test_get_raw_customer_returns_matching_record() -> None:
     store = _store()
 
-    customer = get_customer(store, "7590-VHVEG")
+    customer = get_raw_customer(store, "7590-VHVEG")
 
     assert customer["customer_id"] == "7590-VHVEG"
 
 
-def test_get_customer_raises_for_unknown_id() -> None:
+def test_get_raw_customer_raises_for_unknown_id() -> None:
     store = _store()
 
     with pytest.raises(CustomerNotFoundError):
-        get_customer(store, "does-not-exist")
+        get_raw_customer(store, "does-not-exist")
 
 
 def test_update_outreach_status_persists_and_returns_updated_record() -> None:

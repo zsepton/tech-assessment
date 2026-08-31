@@ -140,8 +140,14 @@ def get_all_customers(store: CustomerStore) -> list[Customer]:
     return [Customer(**raw) for raw in store.values()]
 
 
-def get_customer(store: CustomerStore, customer_id: str) -> RawCustomerRecord:
+def get_raw_customer(store: CustomerStore, customer_id: str) -> RawCustomerRecord:
     """Look up a raw customer record by id.
+
+    Named `get_raw_customer` (not `get_customer`) so it reads as the
+    singular counterpart of `get_all_customers` in name only where it's
+    actually true: this one returns the raw storage record, not a `Customer`
+    domain object. Callers that want a `Customer` should wrap the result
+    themselves, or use `get_all_customers` when a domain object is enough.
 
     Raises CustomerNotFoundError if no record matches.
     """
@@ -160,6 +166,6 @@ def update_outreach_status(
     the transition is legal — callers are expected to check that via
     `services.outreach.validate_transition` before calling this.
     """
-    raw = get_customer(store, customer_id)
+    raw = get_raw_customer(store, customer_id)
     raw["outreach_status"] = status
     return raw

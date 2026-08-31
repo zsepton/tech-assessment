@@ -51,7 +51,7 @@ def _validate_contract_filter(value: str | None) -> None:
 
 def _get_raw_customer_or_404(store: CustomerStore, customer_id: str) -> RawCustomerRecord:
     try:
-        return customer_store.get_customer(store, customer_id)
+        return customer_store.get_raw_customer(store, customer_id)
     except CustomerNotFoundError as exc:
         raise HTTPException(status_code=404, detail=f"Customer '{customer_id}' not found.") from exc
 
