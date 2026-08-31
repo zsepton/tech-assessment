@@ -130,6 +130,16 @@ def load_customers(csv_path: Path = DEFAULT_CSV_PATH) -> CustomerStore:
     return {customer["customer_id"]: customer for customer in customers}
 
 
+def to_customer(raw: RawCustomerRecord) -> Customer:
+    """Convert a raw customer record into a `Customer` domain object.
+
+    The single place this conversion happens, so every caller that needs a
+    `Customer` from a raw record goes through here instead of each writing
+    its own `Customer(**raw)`.
+    """
+    return Customer(**raw)
+
+
 def get_all_customers(store: CustomerStore) -> list[Customer]:
     """Return every customer in the store as a domain object.
 
@@ -137,7 +147,7 @@ def get_all_customers(store: CustomerStore) -> list[Customer]:
     logic elsewhere (e.g. the customer listing service) can operate on
     `Customer` directly instead of depending on the raw storage shape.
     """
-    return [Customer(**raw) for raw in store.values()]
+    return [to_customer(raw) for raw in store.values()]
 
 
 def get_raw_customer(store: CustomerStore, customer_id: str) -> RawCustomerRecord:
@@ -157,15 +167,16 @@ def get_raw_customer(store: CustomerStore, customer_id: str) -> RawCustomerRecor
         raise CustomerNotFoundError(customer_id) from None
 
 
-def update_outreach_status(
-    store: CustomerStore, customer_id: str, status: OutreachStatus
-) -> RawCustomerRecord:
-    """Persist a new outreach status for customer_id, returning the updated record.
+def update_outreach_status(raw: RawCustomerRecord, status: OutreachStatus) -> RawCustomerRecord:
+    """Set a new outreach status on an already-fetched raw record, returning it.
 
-    Raises CustomerNotFoundError if no record matches. Does not validate that
-    the transition is legal — callers are expected to check that via
-    `services.outreach.validate_transition` before calling this.
+    Takes the raw record itself (from `get_raw_customer`) rather than a
+    `store`/`customer_id` pair, so a caller that already looked the customer
+    up (e.g. to check the current status before validating the transition)
+    doesn't have to look it up a second time just to persist the write. Does
+    not validate that the transition is legal — callers are expected to
+    check that via `services.outreach.validate_transition` before calling
+    this.
     """
-    raw = get_raw_customer(store, customer_id)
     raw["outreach_status"] = status
     return raw

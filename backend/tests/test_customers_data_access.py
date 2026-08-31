@@ -9,6 +9,7 @@ from app.data_access.customers import (
     get_raw_customer,
     load_customers,
     parse_customer_row,
+    to_customer,
     update_outreach_status,
 )
 from app.models.customer import Customer
@@ -128,17 +129,24 @@ def test_get_raw_customer_raises_for_unknown_id() -> None:
         get_raw_customer(store, "does-not-exist")
 
 
-def test_update_outreach_status_persists_and_returns_updated_record() -> None:
+def test_update_outreach_status_mutates_and_returns_the_given_record() -> None:
     store = _store()
+    raw = get_raw_customer(store, "7590-VHVEG")
 
-    updated = update_outreach_status(store, "7590-VHVEG", OutreachStatus.IN_PROGRESS)
+    updated = update_outreach_status(raw, OutreachStatus.IN_PROGRESS)
 
     assert updated["outreach_status"] == "IN_PROGRESS"
+    assert updated is raw
+    # The store isn't passed in at all; the caller is expected to have
+    # already fetched `raw` from it (e.g. via get_raw_customer), so no
+    # separate lookup happens here.
     assert store["7590-VHVEG"]["outreach_status"] == "IN_PROGRESS"
 
 
-def test_update_outreach_status_raises_for_unknown_id() -> None:
-    store = _store()
+def test_to_customer_converts_a_raw_record() -> None:
+    raw = get_raw_customer(_store(), "7590-VHVEG")
 
-    with pytest.raises(CustomerNotFoundError):
-        update_outreach_status(store, "does-not-exist", OutreachStatus.IN_PROGRESS)
+    customer = to_customer(raw)
+
+    assert isinstance(customer, Customer)
+    assert customer.customer_id == "7590-VHVEG"
