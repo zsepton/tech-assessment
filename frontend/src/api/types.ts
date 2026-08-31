@@ -32,7 +32,12 @@ export interface PaginatedCustomers {
   limit: number;
 }
 
-/** A customer record, matching the fields in the source Telco churn CSV. */
+/**
+ * A customer record, as returned by the API. Excludes the historical `churn`
+ * outcome label present in the source CSV: the backend never serializes it,
+ * since it's the ground-truth answer the risk score predicts, not a
+ * prospective signal.
+ */
 export interface Customer {
   customer_id: string;
   gender: string;
@@ -54,7 +59,6 @@ export interface Customer {
   payment_method: string;
   monthly_charges: number;
   total_charges: number;
-  churn: boolean;
   outreach_status: OutreachStatus;
 }
 

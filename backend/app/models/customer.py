@@ -26,5 +26,8 @@ class Customer(BaseModel):
     payment_method: str
     monthly_charges: float = Field(ge=0)
     total_charges: float = Field(ge=0)
-    churn: bool = Field(description="Historical churn label from the source dataset")
+    # exclude=True: this is the historical dataset's ground-truth outcome, not
+    # a prospective signal — never serialize it into an API response, since
+    # that would show a retention agent the answer the risk score predicts.
+    churn: bool = Field(description="Historical churn label from the source dataset", exclude=True)
     outreach_status: OutreachStatus = OutreachStatus.NOT_CONTACTED
