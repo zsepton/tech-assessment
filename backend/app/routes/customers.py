@@ -1,7 +1,12 @@
 from fastapi import APIRouter, HTTPException, Query, Request
 
 from app.data_access import customers as customer_store
-from app.data_access.customers import CustomerNotFoundError, CustomerStore, RawCustomerRecord
+from app.data_access.customers import (
+    CustomerNotFoundError,
+    CustomerStore,
+    RawCustomerRecord,
+    to_customer,
+)
 from app.models.customer import Customer
 from app.models.customer_detail import CustomerDetail
 from app.models.customer_list import CustomerListItem, PaginatedCustomers
@@ -58,7 +63,7 @@ def _get_raw_customer_or_404(store: CustomerStore, customer_id: str) -> RawCusto
 
 def _get_customer_or_404(store: CustomerStore, customer_id: str) -> Customer:
     raw = _get_raw_customer_or_404(store, customer_id)
-    return Customer(**raw)
+    return to_customer(raw)
 
 
 @router.get("/customers", response_model=PaginatedCustomers)
@@ -113,7 +118,7 @@ def update_outreach_status(
     store: CustomerStore = request.app.state.customers
     raw = _get_raw_customer_or_404(store, customer_id)
 
-    current_status = Customer(**raw).outreach_status
+    current_status = to_customer(raw).outreach_status
     try:
         validate_transition(current_status, body.status)
     except InvalidOutreachTransitionError as exc:
@@ -121,8 +126,9 @@ def update_outreach_status(
 
     # Synchronous, no `await` between the transition check above and this
     # write — safe under FastAPI's single-process model without a lock.
-    raw = customer_store.update_outreach_status(store, customer_id, body.status)
+    # Mutates and returns the same `raw` fetched above, not a fresh lookup.
+    raw = customer_store.update_outreach_status(raw, body.status)
 
-    customer = Customer(**raw)
+    customer = to_customer(raw)
     risk = compute_risk_score(customer)
     return CustomerDetail(customer=customer, risk=risk)
