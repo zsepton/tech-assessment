@@ -1,5 +1,6 @@
 from typing import Any
 
+from app.models.customer import Customer
 from app.models.outreach import OutreachStatus
 from app.models.risk import RiskTier
 from app.services.customer_listing import CustomerListFilters, list_matching_customers
@@ -28,9 +29,9 @@ BASE: dict[str, Any] = {
 }
 
 
-def _customer(customer_id: str, **overrides: Any) -> dict[str, Any]:
+def _customer(customer_id: str, **overrides: Any) -> Customer:
     """A High-risk customer by default (score 92); override fields to vary it."""
-    return {**BASE, "customer_id": customer_id, **overrides}
+    return Customer(**{**BASE, "customer_id": customer_id, **overrides})
 
 
 HIGH_RISK = _customer("high-1")
