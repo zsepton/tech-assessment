@@ -1,3 +1,4 @@
+import { StrictMode } from "react";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -145,5 +146,30 @@ describe("OutreachControl", () => {
     rejectUpdate(new ApiError("stale", 500, "Stale failure"));
 
     await waitFor(() => expect(updateOutreachStatusMock).toHaveBeenCalledTimes(1));
+  });
+
+  it("recovers from the updating state under StrictMode's mount/cleanup/remount dance", async () => {
+    // Regression test: React 18 StrictMode mounts every component, cleans
+    // it up, then mounts it again once in development. The mount-guard
+    // effect's cleanup used to set `mountedRef.current = false` with
+    // nothing to undo it, so after StrictMode's remount the ref was stuck
+    // `false` forever even though the component was genuinely still
+    // mounted, silently skipping every future `onUpdated`/`setUpdating`
+    // call and leaving the button stuck on "Updating…" indefinitely, even
+    // though the PATCH itself had succeeded.
+    updateOutreachStatusMock.mockResolvedValue(makeDetail());
+    const onUpdated = vi.fn();
+    const user = userEvent.setup();
+
+    render(
+      <StrictMode>
+        <OutreachControl customerId="7590-VHVEG" status="NOT_CONTACTED" onUpdated={onUpdated} />
+      </StrictMode>,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Mark as In progress →" }));
+
+    await waitFor(() => expect(onUpdated).toHaveBeenCalledWith(makeDetail()));
+    expect(screen.queryByRole("button", { name: "Updating…" })).not.toBeInTheDocument();
   });
 });
