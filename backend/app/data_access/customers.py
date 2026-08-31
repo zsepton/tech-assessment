@@ -1,6 +1,6 @@
 import csv
 from pathlib import Path
-from typing import Any
+from typing import NotRequired, TypedDict
 
 from app.models.outreach import OutreachStatus
 
@@ -8,7 +8,43 @@ DEFAULT_CSV_PATH = (
     Path(__file__).resolve().parents[3] / "data" / "WA_Fn-UseC_-Telco-Customer-Churn.csv"
 )
 
-CustomerStore = dict[str, dict[str, Any]]
+
+class RawCustomerRecord(TypedDict):
+    """The shape of a raw customer record, matching `Customer`'s fields.
+
+    Using a TypedDict (rather than `dict[str, Any]`) means `Customer(**raw)`
+    is checked field-by-field by mypy — e.g. a `tenure` accidentally parsed
+    as a str instead of an int is a type error here, not just a runtime
+    `pydantic.ValidationError` on the first request.
+    """
+
+    customer_id: str
+    gender: str
+    senior_citizen: bool
+    partner: bool
+    dependents: bool
+    tenure: int
+    phone_service: bool
+    multiple_lines: str
+    internet_service: str
+    online_security: str
+    online_backup: str
+    device_protection: str
+    tech_support: str
+    streaming_tv: str
+    streaming_movies: str
+    contract: str
+    paperless_billing: bool
+    payment_method: str
+    monthly_charges: float
+    total_charges: float
+    churn: bool
+    # Absent until the first PATCH /customers/{id}/outreach; Customer's
+    # matching field has a default, so omitting it is fine.
+    outreach_status: NotRequired[OutreachStatus]
+
+
+CustomerStore = dict[str, RawCustomerRecord]
 """In-memory customer storage, keyed by customer_id. Populated once at
 startup by `load_customers` and held on `app.state.customers`; reads and
 writes should go through this module's accessors below rather than
@@ -37,7 +73,7 @@ def _parse_charges(raw: str) -> float:
         return 0.0
 
 
-def parse_customer_row(row: dict[str, str]) -> dict[str, Any]:
+def parse_customer_row(row: dict[str, str]) -> RawCustomerRecord:
     return {
         "customer_id": row["customerID"].strip(),
         "gender": row["gender"].strip(),
@@ -71,12 +107,12 @@ def load_customers(csv_path: Path = DEFAULT_CSV_PATH) -> CustomerStore:
     return {customer["customer_id"]: customer for customer in customers}
 
 
-def get_all_customers(store: CustomerStore) -> list[dict[str, Any]]:
+def get_all_customers(store: CustomerStore) -> list[RawCustomerRecord]:
     """Return every raw customer record in the store."""
     return list(store.values())
 
 
-def get_customer(store: CustomerStore, customer_id: str) -> dict[str, Any]:
+def get_customer(store: CustomerStore, customer_id: str) -> RawCustomerRecord:
     """Look up a raw customer record by id.
 
     Raises CustomerNotFoundError if no record matches.
@@ -89,7 +125,7 @@ def get_customer(store: CustomerStore, customer_id: str) -> dict[str, Any]:
 
 def update_outreach_status(
     store: CustomerStore, customer_id: str, status: OutreachStatus
-) -> dict[str, Any]:
+) -> RawCustomerRecord:
     """Persist a new outreach status for customer_id, returning the updated record.
 
     Raises CustomerNotFoundError if no record matches. Does not validate that
@@ -97,5 +133,5 @@ def update_outreach_status(
     `services.outreach.validate_transition` before calling this.
     """
     raw = get_customer(store, customer_id)
-    raw["outreach_status"] = status.value
+    raw["outreach_status"] = status
     return raw
