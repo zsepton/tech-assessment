@@ -1,8 +1,11 @@
 import csv
+import logging
 from pathlib import Path
 from typing import NotRequired, TypedDict
 
 from app.models.outreach import OutreachStatus
+
+logger = logging.getLogger("app.data_access.customers")
 
 DEFAULT_CSV_PATH = (
     Path(__file__).resolve().parents[3] / "data" / "WA_Fn-UseC_-Telco-Customer-Churn.csv"
@@ -63,19 +66,34 @@ def _yes_no(value: str) -> bool:
     return value.strip() == "Yes"
 
 
-def _parse_charges(raw: str) -> float:
+def _parse_charges(raw: str, *, customer_id: str, field_name: str) -> float:
+    """Parse a charges field, treating a blank value as 0.0.
+
+    A blank value is an expected artifact of this dataset (brand-new
+    customers with tenure=0 haven't been billed yet). A non-blank value that
+    still fails to parse as a float is not expected, and is logged as a
+    warning (distinct from the blank case) so malformed source data doesn't
+    silently masquerade as a legitimate $0 customer.
+    """
     stripped = raw.strip()
     if not stripped:
         return 0.0
     try:
         return float(stripped)
     except ValueError:
+        logger.warning(
+            "malformed %s value %r for customer %s; treating as 0.0",
+            field_name,
+            raw,
+            customer_id,
+        )
         return 0.0
 
 
 def parse_customer_row(row: dict[str, str]) -> RawCustomerRecord:
+    customer_id = row["customerID"].strip()
     return {
-        "customer_id": row["customerID"].strip(),
+        "customer_id": customer_id,
         "gender": row["gender"].strip(),
         "senior_citizen": row["SeniorCitizen"].strip() == "1",
         "partner": _yes_no(row["Partner"]),
@@ -93,8 +111,12 @@ def parse_customer_row(row: dict[str, str]) -> RawCustomerRecord:
         "contract": row["Contract"].strip(),
         "paperless_billing": _yes_no(row["PaperlessBilling"]),
         "payment_method": row["PaymentMethod"].strip(),
-        "monthly_charges": _parse_charges(row["MonthlyCharges"]),
-        "total_charges": _parse_charges(row["TotalCharges"]),
+        "monthly_charges": _parse_charges(
+            row["MonthlyCharges"], customer_id=customer_id, field_name="MonthlyCharges"
+        ),
+        "total_charges": _parse_charges(
+            row["TotalCharges"], customer_id=customer_id, field_name="TotalCharges"
+        ),
         # Historical outcome label from the source dataset — not a scoring input.
         "churn": _yes_no(row["Churn"]),
     }

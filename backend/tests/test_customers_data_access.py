@@ -51,21 +51,35 @@ def test_parse_customer_row_coerces_types() -> None:
     assert parsed["churn"] is False
 
 
-def test_parse_customer_row_handles_blank_total_charges() -> None:
+def test_parse_customer_row_handles_blank_total_charges(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
     row = {**RAW_ROW, "tenure": "0", "TotalCharges": " "}
 
-    parsed = parse_customer_row(row)
+    with caplog.at_level("WARNING", logger="app.data_access.customers"):
+        parsed = parse_customer_row(row)
 
     assert parsed["tenure"] == 0
     assert parsed["total_charges"] == 0.0
+    # A blank value is an expected artifact of this dataset (a brand-new,
+    # not-yet-billed customer), not a data-quality problem, so it should not
+    # be logged as a warning the way a genuinely malformed value is below.
+    assert caplog.records == []
 
 
-def test_parse_customer_row_handles_malformed_charges() -> None:
+def test_parse_customer_row_handles_malformed_charges(caplog: pytest.LogCaptureFixture) -> None:
     row = {**RAW_ROW, "MonthlyCharges": "not-a-number"}
 
-    parsed = parse_customer_row(row)
+    with caplog.at_level("WARNING", logger="app.data_access.customers"):
+        parsed = parse_customer_row(row)
 
     assert parsed["monthly_charges"] == 0.0
+    assert len(caplog.records) == 1
+    message = caplog.records[0].getMessage()
+    assert caplog.records[0].levelname == "WARNING"
+    assert "MonthlyCharges" in message
+    assert "not-a-number" in message
+    assert row["customerID"] in message
 
 
 def test_load_customers_keys_by_customer_id(tmp_path: Path) -> None:
