@@ -2,6 +2,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { getCustomer, getCustomers, getModelInfo } from "./api";
 import App from "./App";
+import { makeCustomerDetail } from "./testFixtures";
 
 vi.mock("./api", async () => {
   const actual = await vi.importActual<typeof import("./api")>("./api");
@@ -19,32 +20,7 @@ describe("App", () => {
 
   it("renders the customer detail view when navigating to /customers/:id", async () => {
     window.history.pushState({}, "", "/customers/7590-VHVEG");
-    vi.mocked(getCustomer).mockResolvedValue({
-      customer: {
-        customer_id: "7590-VHVEG",
-        gender: "Female",
-        senior_citizen: false,
-        partner: true,
-        dependents: false,
-        tenure: 1,
-        phone_service: false,
-        multiple_lines: "No phone service",
-        internet_service: "DSL",
-        online_security: "No",
-        online_backup: "Yes",
-        device_protection: "No",
-        tech_support: "No",
-        streaming_tv: "No",
-        streaming_movies: "No",
-        contract: "Month-to-month",
-        paperless_billing: true,
-        payment_method: "Electronic check",
-        monthly_charges: 29.85,
-        total_charges: 29.85,
-        outreach_status: "NOT_CONTACTED",
-      },
-      risk: { score: 92, tier: "High", factors: [] },
-    });
+    vi.mocked(getCustomer).mockResolvedValue(makeCustomerDetail());
     vi.mocked(getModelInfo).mockResolvedValue({
       contract_weights: {},
       tenure_weight_buckets: [],
