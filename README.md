@@ -43,7 +43,10 @@ through both test suites passing) in well under 5 minutes.
    ```
 
    Runs at `http://localhost:8000`. Interactive API docs at
-   `http://localhost:8000/docs`.
+   `http://localhost:8000/docs`. Accepts requests from `http://localhost:5173`
+   by default; if Vite picks a different port (it auto-increments when 5173
+   is busy), override it with the `ALLOWED_ORIGINS` env var (comma-separated
+   for more than one, e.g. `ALLOWED_ORIGINS=http://localhost:5174`).
 
 **Frontend** (Node 20+), in a second terminal:
 

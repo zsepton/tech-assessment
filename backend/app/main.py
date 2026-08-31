@@ -1,4 +1,5 @@
 import asyncio
+import os
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
@@ -13,7 +14,15 @@ from app.routes.model_info import router as model_info_router
 
 configure_logging()
 
-ALLOWED_ORIGINS = ["http://localhost:5173"]
+DEFAULT_ALLOWED_ORIGIN = "http://localhost:5173"
+
+
+def _parse_allowed_origins(raw: str) -> list[str]:
+    """Split a comma-separated ALLOWED_ORIGINS value into a list, trimming whitespace."""
+    return [origin.strip() for origin in raw.split(",") if origin.strip()]
+
+
+ALLOWED_ORIGINS = _parse_allowed_origins(os.environ.get("ALLOWED_ORIGINS", DEFAULT_ALLOWED_ORIGIN))
 
 
 @asynccontextmanager
