@@ -3,6 +3,7 @@ import logging
 from pathlib import Path
 from typing import NotRequired, TypedDict
 
+from app.models.customer import Customer
 from app.models.outreach import OutreachStatus
 
 logger = logging.getLogger("app.data_access.customers")
@@ -129,9 +130,14 @@ def load_customers(csv_path: Path = DEFAULT_CSV_PATH) -> CustomerStore:
     return {customer["customer_id"]: customer for customer in customers}
 
 
-def get_all_customers(store: CustomerStore) -> list[RawCustomerRecord]:
-    """Return every raw customer record in the store."""
-    return list(store.values())
+def get_all_customers(store: CustomerStore) -> list[Customer]:
+    """Return every customer in the store as a domain object.
+
+    Raw-to-domain deserialization happens here, not in callers, so business
+    logic elsewhere (e.g. the customer listing service) can operate on
+    `Customer` directly instead of depending on the raw storage shape.
+    """
+    return [Customer(**raw) for raw in store.values()]
 
 
 def get_customer(store: CustomerStore, customer_id: str) -> RawCustomerRecord:

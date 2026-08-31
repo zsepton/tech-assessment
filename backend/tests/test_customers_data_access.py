@@ -11,6 +11,7 @@ from app.data_access.customers import (
     parse_customer_row,
     update_outreach_status,
 )
+from app.models.customer import Customer
 from app.models.outreach import OutreachStatus
 
 RAW_ROW = {
@@ -103,12 +104,13 @@ def _store() -> CustomerStore:
     }
 
 
-def test_get_all_customers_returns_every_record() -> None:
+def test_get_all_customers_returns_every_record_as_a_domain_object() -> None:
     store = _store()
 
     all_customers = get_all_customers(store)
 
-    assert {c["customer_id"] for c in all_customers} == {"7590-VHVEG", "5575-GNVDE"}
+    assert {c.customer_id for c in all_customers} == {"7590-VHVEG", "5575-GNVDE"}
+    assert all(isinstance(c, Customer) for c in all_customers)
 
 
 def test_get_customer_returns_matching_record() -> None:

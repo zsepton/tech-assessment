@@ -7,7 +7,6 @@ logic, so it's unit-testable independent of an HTTP request/response cycle.
 
 from dataclasses import dataclass
 
-from app.data_access.customers import RawCustomerRecord
 from app.models.customer import Customer
 from app.models.outreach import OutreachStatus
 from app.models.risk import RiskScore, RiskTier
@@ -40,15 +39,14 @@ def _matches(customer: Customer, risk: RiskScore, filters: CustomerListFilters) 
 
 
 def list_matching_customers(
-    raw_customers: list[RawCustomerRecord],
+    customers: list[Customer],
     filters: CustomerListFilters,
     offset: int,
     limit: int,
 ) -> CustomerListPage:
-    """Score, filter, sort, and paginate the given raw customer records."""
+    """Score, filter, sort, and paginate the given customers."""
     scored = []
-    for raw in raw_customers:
-        customer = Customer(**raw)
+    for customer in customers:
         risk = compute_risk_score(customer)
         if _matches(customer, risk, filters):
             scored.append((customer, risk))
