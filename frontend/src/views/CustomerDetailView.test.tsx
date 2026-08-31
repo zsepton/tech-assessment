@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -250,7 +250,7 @@ describe("CustomerDetailView", () => {
     await waitFor(() => expect(getModelInfoMock).toHaveBeenCalledTimes(1));
   });
 
-  it("shows a message when rendered with no customer id", () => {
+  it("shows a message when rendered with no customer id", async () => {
     render(
       <MemoryRouter initialEntries={["/"]}>
         <Routes>
@@ -261,6 +261,13 @@ describe("CustomerDetailView", () => {
 
     expect(screen.getByText("No customer id was provided.")).toBeInTheDocument();
     expect(getCustomerMock).not.toHaveBeenCalled();
+
+    // With no customerId, both useAsync calls resolve trivially via
+    // Promise.resolve(null); flush that microtask here so the resulting
+    // state updates don't land after this test ends, outside any act()
+    // boundary (this was the one synchronous test rendering
+    // CustomerDetailView, and the actual source of issue #72's warning).
+    await act(async () => {});
   });
 
   it("updates the displayed outreach status after a successful transition", async () => {
