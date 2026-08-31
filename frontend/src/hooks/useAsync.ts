@@ -14,7 +14,11 @@ function toErrorMessage(err: unknown): string {
 }
 
 function depsEqual(a: DependencyList, b: DependencyList): boolean {
-  return a.length === b.length && a.every((value, index) => Object.is(value, b[index]));
+  // No length check: React itself requires a useEffect dependency array's
+  // length to stay constant across renders, so `a`/`b` are always the same
+  // length in practice (and React warns loudly if a caller ever violates
+  // that, the same rule this hook's own `deps` param relies on).
+  return a.every((value, index) => Object.is(value, b[index]));
 }
 
 /**
@@ -49,6 +53,12 @@ export function useAsync<T>(
   if (!depsEqual(prevDeps, deps)) {
     setPrevDeps(deps);
     setLoading(true);
+    // Clear a previous failure's message as soon as a new request starts,
+    // not just on the new request's own success/failure: otherwise a retry
+    // renders the loading skeleton stacked on top of the stale error banner
+    // until the new request settles, since callers gate their skeleton on
+    // `loading` and their error banner on `error` independently.
+    setError(null);
   }
 
   useEffect(() => {
