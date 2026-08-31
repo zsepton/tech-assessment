@@ -74,3 +74,11 @@ def test_invalid_status_value_returns_422(client: TestClient) -> None:
     response = client.patch(f"/customers/{KNOWN_CUSTOMER_ID}/outreach", json={"status": "GHOSTED"})
 
     assert response.status_code == 422
+
+
+def test_response_does_not_leak_historical_churn_label(client: TestClient) -> None:
+    response = client.patch(
+        f"/customers/{KNOWN_CUSTOMER_ID}/outreach", json={"status": "IN_PROGRESS"}
+    )
+
+    assert "churn" not in response.json()["customer"]

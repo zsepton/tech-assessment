@@ -41,7 +41,6 @@ describe("App", () => {
         payment_method: "Electronic check",
         monthly_charges: 29.85,
         total_charges: 29.85,
-        churn: false,
         outreach_status: "NOT_CONTACTED",
       },
       risk: { score: 92, tier: "High", factors: [] },

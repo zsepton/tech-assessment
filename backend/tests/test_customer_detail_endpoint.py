@@ -39,3 +39,9 @@ def test_unknown_customer_id_returns_404(client: TestClient) -> None:
 
     assert response.status_code == 404
     assert "does-not-exist" in response.json()["detail"]
+
+
+def test_response_does_not_leak_historical_churn_label(client: TestClient) -> None:
+    response = client.get("/customers/7590-VHVEG")
+
+    assert "churn" not in response.json()["customer"]
