@@ -1,9 +1,7 @@
-from typing import Any
-
 from fastapi import APIRouter, HTTPException, Query, Request
 
 from app.data_access import customers as customer_store
-from app.data_access.customers import CustomerNotFoundError, CustomerStore
+from app.data_access.customers import CustomerNotFoundError, CustomerStore, RawCustomerRecord
 from app.models.customer import Customer
 from app.models.customer_detail import CustomerDetail
 from app.models.customer_list import CustomerListItem, PaginatedCustomers
@@ -51,7 +49,7 @@ def _validate_contract_filter(value: str | None) -> None:
         raise HTTPException(status_code=400, detail=f"Invalid contract filter value: {value!r}")
 
 
-def _get_raw_customer_or_404(store: CustomerStore, customer_id: str) -> dict[str, Any]:
+def _get_raw_customer_or_404(store: CustomerStore, customer_id: str) -> RawCustomerRecord:
     try:
         return customer_store.get_customer(store, customer_id)
     except CustomerNotFoundError as exc:

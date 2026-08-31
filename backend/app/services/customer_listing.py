@@ -6,8 +6,8 @@ logic, so it's unit-testable independent of an HTTP request/response cycle.
 """
 
 from dataclasses import dataclass
-from typing import Any
 
+from app.data_access.customers import RawCustomerRecord
 from app.models.customer import Customer
 from app.models.outreach import OutreachStatus
 from app.models.risk import RiskScore, RiskTier
@@ -40,7 +40,7 @@ def _matches(customer: Customer, risk: RiskScore, filters: CustomerListFilters) 
 
 
 def list_matching_customers(
-    raw_customers: list[dict[str, Any]],
+    raw_customers: list[RawCustomerRecord],
     filters: CustomerListFilters,
     offset: int,
     limit: int,
