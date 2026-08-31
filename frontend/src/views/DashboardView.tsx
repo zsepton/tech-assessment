@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
-import { ApiError, getCustomers } from "../api";
+import { getCustomers } from "../api";
 import type { PaginatedCustomers } from "../api";
 import { DashboardTableSkeleton } from "../components/DashboardTableSkeleton";
 import { ErrorBanner } from "../components/ErrorBanner";
@@ -9,62 +9,41 @@ import type { CustomerFilters } from "../components/FilterBar";
 import { OutreachBadge } from "../components/OutreachBadge";
 import { Pagination } from "../components/Pagination";
 import { RiskBadge } from "../components/RiskBadge";
+import { useAsync } from "../hooks/useAsync";
 import "./DashboardView.css";
 
 const LIMIT = 20;
 
 const EMPTY_FILTERS: CustomerFilters = { riskTier: "", contract: "", outreachStatus: "" };
+const EMPTY_PAGE: PaginatedCustomers = { items: [], total: 0, offset: 0, limit: LIMIT };
 
 export function DashboardView() {
   const [filters, setFilters] = useState<CustomerFilters>(EMPTY_FILTERS);
   const [offset, setOffset] = useState(0);
-  const [data, setData] = useState<PaginatedCustomers | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    let cancelled = false;
-
-    getCustomers({
-      offset,
-      limit: LIMIT,
-      risk_tier: filters.riskTier || undefined,
-      contract: filters.contract || undefined,
-      outreach_status: filters.outreachStatus || undefined,
-    })
-      .then((result) => {
-        if (!cancelled) {
-          setData(result);
-          setError(null);
-        }
-      })
-      .catch((err: unknown) => {
-        if (!cancelled) {
-          setError(err instanceof ApiError ? err.detail : "Something went wrong.");
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [offset, filters]);
+  const { data, loading, error } = useAsync(
+    () =>
+      getCustomers({
+        offset,
+        limit: LIMIT,
+        risk_tier: filters.riskTier || undefined,
+        contract: filters.contract || undefined,
+        outreach_status: filters.outreachStatus || undefined,
+      }),
+    EMPTY_PAGE,
+    [offset, filters],
+  );
 
   function handleFiltersChange(next: CustomerFilters) {
-    setLoading(true);
     setFilters(next);
     setOffset(0);
   }
 
   function goPrev() {
-    setLoading(true);
     setOffset((prev) => Math.max(0, prev - LIMIT));
   }
 
   function goNext() {
-    setLoading(true);
     setOffset((prev) => prev + LIMIT);
   }
 
@@ -72,7 +51,7 @@ export function DashboardView() {
     <div className="dashboard">
       <div className="dashboard__header">
         <h1>Customer risk dashboard</h1>
-        {data && (
+        {!loading && !error && (
           <p className="dashboard__subtitle">
             {data.total.toLocaleString()} customers · sorted by risk score, high to low
           </p>
@@ -84,7 +63,7 @@ export function DashboardView() {
       {loading && <DashboardTableSkeleton />}
       {error && <ErrorBanner message={error} />}
 
-      {!loading && !error && data && (
+      {!loading && !error && (
         <>
           <div className="dashboard__table-card">
             <table>

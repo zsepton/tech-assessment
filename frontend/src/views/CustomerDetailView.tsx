@@ -1,11 +1,11 @@
-import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { ApiError, getCustomer, getModelInfo } from "../api";
+import { getCustomer, getModelInfo } from "../api";
 import type { Customer, CustomerDetail, ModelInfo } from "../api";
 import { DetailSkeleton } from "../components/DetailSkeleton";
 import { ErrorBanner } from "../components/ErrorBanner";
 import { OutreachControl } from "../components/OutreachControl";
 import { RiskBadge } from "../components/RiskBadge";
+import { useAsync } from "../hooks/useAsync";
 import "./CustomerDetailView.css";
 
 const PROFILE_FIELDS: Array<[string, (c: Customer) => string]> = [
@@ -29,46 +29,26 @@ const PROFILE_FIELDS: Array<[string, (c: Customer) => string]> = [
 
 export function CustomerDetailView() {
   const { customerId } = useParams<{ customerId: string }>();
-  const [detail, setDetail] = useState<CustomerDetail | null>(null);
-  const [modelInfo, setModelInfo] = useState<ModelInfo | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!customerId) {
-      return;
-    }
+  const {
+    data: detail,
+    setData: setDetail,
+    loading,
+    error,
+  } = useAsync<CustomerDetail | null>(
+    () => (customerId ? getCustomer(customerId) : Promise.resolve(null)),
+    null,
+    [customerId],
+  );
 
-    let cancelled = false;
-
-    getCustomer(customerId)
-      .then((result) => {
-        if (!cancelled) {
-          setDetail(result);
-          setError(null);
-        }
-      })
-      .catch((err: unknown) => {
-        if (!cancelled) {
-          setError(err instanceof ApiError ? err.detail : "Something went wrong.");
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-
-    // Model info is supplementary context (the tier thresholds footnote
-    // below); a failure here shouldn't block the main customer detail.
-    getModelInfo()
-      .then((result) => {
-        if (!cancelled) setModelInfo(result);
-      })
-      .catch(() => undefined);
-
-    return () => {
-      cancelled = true;
-    };
-  }, [customerId]);
+  // Model info is supplementary context (the tier thresholds footnote
+  // below); a failure here shouldn't block the main customer detail, so
+  // this hook's own loading/error state is intentionally left unused.
+  const { data: modelInfo } = useAsync<ModelInfo | null>(
+    () => (customerId ? getModelInfo() : Promise.resolve(null)),
+    null,
+    [customerId],
+  );
 
   const maxContribution =
     detail && detail.risk.factors.length > 0
