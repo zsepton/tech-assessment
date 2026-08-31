@@ -128,4 +128,44 @@ describe("OutreachControl", () => {
 
     await waitFor(() => expect(screen.getByText("Something went wrong.")).toBeInTheDocument());
   });
+
+  it("does not call onUpdated if unmounted while the update request is in flight", async () => {
+    let resolveUpdate!: (value: CustomerDetail) => void;
+    const updatePromise = new Promise<CustomerDetail>((resolve) => {
+      resolveUpdate = resolve;
+    });
+    updateOutreachStatusMock.mockReturnValue(updatePromise);
+    const onUpdated = vi.fn();
+    const user = userEvent.setup();
+
+    const { unmount } = render(
+      <OutreachControl customerId="7590-VHVEG" status="NOT_CONTACTED" onUpdated={onUpdated} />,
+    );
+    await user.click(screen.getByRole("button", { name: "Mark as In progress →" }));
+
+    unmount();
+    resolveUpdate(makeDetail());
+
+    await waitFor(() => expect(updateOutreachStatusMock).toHaveBeenCalledTimes(1));
+    expect(onUpdated).not.toHaveBeenCalled();
+  });
+
+  it("does not throw if unmounted while the update request is failing", async () => {
+    let rejectUpdate!: (error: unknown) => void;
+    const updatePromise = new Promise<CustomerDetail>((_resolve, reject) => {
+      rejectUpdate = reject;
+    });
+    updateOutreachStatusMock.mockReturnValue(updatePromise);
+    const user = userEvent.setup();
+
+    const { unmount } = render(
+      <OutreachControl customerId="7590-VHVEG" status="NOT_CONTACTED" onUpdated={vi.fn()} />,
+    );
+    await user.click(screen.getByRole("button", { name: "Mark as In progress →" }));
+
+    unmount();
+    rejectUpdate(new ApiError("stale", 500, "Stale failure"));
+
+    await waitFor(() => expect(updateOutreachStatusMock).toHaveBeenCalledTimes(1));
+  });
 });
