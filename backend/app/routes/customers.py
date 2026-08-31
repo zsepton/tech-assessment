@@ -9,6 +9,7 @@ from app.models.customer_detail import CustomerDetail
 from app.models.customer_list import CustomerListItem, PaginatedCustomers
 from app.models.outreach import OutreachStatus, OutreachUpdateRequest
 from app.models.risk import RiskTier
+from app.services.customer_listing import CustomerListFilters, list_matching_customers
 from app.services.outreach import InvalidOutreachTransitionError, validate_transition
 from app.services.scoring import compute_risk_score
 
@@ -76,31 +77,12 @@ def list_customers(
     _validate_contract_filter(contract)
 
     store: CustomerStore = request.app.state.customers
-
-    scored = []
-    for raw in customer_store.get_all_customers(store):
-        customer = Customer(**raw)
-        risk = compute_risk_score(customer)
-
-        if parsed_risk_tier is not None and risk.tier != parsed_risk_tier:
-            continue
-        if contract is not None and customer.contract != contract:
-            continue
-        if (
-            parsed_outreach_status is not None
-            and customer.outreach_status != parsed_outreach_status
-        ):
-            continue
-
-        scored.append((customer, risk))
-
-    # Sort before slicing, descending by score, so pages are stable across
-    # requests; customer_id as a secondary key makes the ordering fully
-    # deterministic rather than relying on dict-insertion-order as a tiebreaker.
-    scored.sort(key=lambda pair: (-pair[1].score, pair[0].customer_id))
-
-    total = len(scored)
-    page = scored[offset : offset + limit]
+    filters = CustomerListFilters(
+        risk_tier=parsed_risk_tier, contract=contract, outreach_status=parsed_outreach_status
+    )
+    page = list_matching_customers(
+        customer_store.get_all_customers(store), filters, offset=offset, limit=limit
+    )
 
     items = [
         CustomerListItem(
@@ -112,10 +94,10 @@ def list_customers(
             risk_score=risk.score,
             risk_tier=risk.tier,
         )
-        for customer, risk in page
+        for customer, risk in page.items
     ]
 
-    return PaginatedCustomers(items=items, total=total, offset=offset, limit=limit)
+    return PaginatedCustomers(items=items, total=page.total, offset=offset, limit=limit)
 
 
 @router.get("/customers/{customer_id}", response_model=CustomerDetail)
