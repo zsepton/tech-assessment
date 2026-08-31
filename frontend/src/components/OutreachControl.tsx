@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ApiError, updateOutreachStatus } from "../api";
 import type { CustomerDetail, OutreachStatus } from "../api";
 import { OUTREACH_TRANSITIONS } from "../outreachTransitions";
@@ -16,6 +16,17 @@ export function OutreachControl({ customerId, status, onUpdated }: OutreachContr
   const [updating, setUpdating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Unlike the effect-scoped `cancelled` flags in DashboardView/
+  // CustomerDetailView, this guard spans the component's whole lifetime
+  // (not one fetch), since a click can be followed by an unmount at any
+  // point before the PATCH resolves.
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
   const nextStatuses = OUTREACH_TRANSITIONS[status];
 
   async function handleTransition(next: OutreachStatus) {
@@ -24,15 +35,21 @@ export function OutreachControl({ customerId, status, onUpdated }: OutreachContr
 
     try {
       const detail = await updateOutreachStatus(customerId, next);
-      // Pessimistic update: reflect the status the server actually
-      // confirmed, not the one we asked for — on failure, `status` (from
-      // props) is untouched, so the badge simply keeps showing the last
-      // confirmed server state.
-      onUpdated(detail);
+      if (mountedRef.current) {
+        // Pessimistic update: reflect the status the server actually
+        // confirmed, not the one we asked for — on failure, `status` (from
+        // props) is untouched, so the badge simply keeps showing the last
+        // confirmed server state.
+        onUpdated(detail);
+      }
     } catch (err) {
-      setError(err instanceof ApiError ? err.detail : "Something went wrong.");
+      if (mountedRef.current) {
+        setError(err instanceof ApiError ? err.detail : "Something went wrong.");
+      }
     } finally {
-      setUpdating(false);
+      if (mountedRef.current) {
+        setUpdating(false);
+      }
     }
   }
 
